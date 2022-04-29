@@ -1,0 +1,344 @@
+## Copyright (c) 2022 Oracle and/or its affiliates.
+## All rights reserved. The Universal Permissive License (UPL), Version 1.0 as shown at http://oss.oracle.com/licenses/upl
+
+title: "Create deployment for GlusterFS on Oracle Cloud Infrastructure Compute bare metal instances."
+stackDescription: "Deploy 3 nodes with GlusterFS on Oracle Cloud Infrastructure Compute bare metal instances."
+schemaVersion: 1.1.0
+version: "20190404"
+locale: "en"
+
+groupings:
+  - title: "Hidden General Configuration"
+    visible: false
+    variables:
+    - tenancy_ocid
+    - compartment_ocid
+    - region
+    - scripts_directory
+    - ssh_user
+    - volume_attach_device_mapping
+    - gluster_ol_repo_mapping
+    - ad_number
+    - images
+    - images1
+    - imagesC
+    - mp_listing_id
+    - mp_listing_resource_id
+    - mp_listing_resource_version
+    - use_marketplace_image
+    - marketplace_source_images
+    - release
+    - availability_domain_number
+
+  - title: "General Deployment Configuration"
+    visible: true
+    variables:
+    - vcn_cidr
+    - availability_domain_name
+    - use_existing_vcn
+
+  - title: Exisiting VCN usage
+    visible: 
+      and:
+        - use_existing_vcn
+    variables:
+    - vcn_id
+    - bastion_subnet_id
+    - storage_subnet_id
+    - fs_subnet_id
+
+  - title: "Bastion Instance Configuration"
+    visible: true
+    variables:
+    - bastion_shape
+    - bastion_node_count
+    - bastion_hostname_prefix
+
+  - title: "GlusterFS Server Instance Configuration"
+    visible: true
+    variables:
+    - gluster_server_shape
+    - gluster_server_node_count
+    - gluster_server_hostname_prefix
+    - gluster_server_disk_count
+    - gluster_server_disk_size
+    - gluster_server_num_of_disks_in_brick
+    - gluster_server_disk_vpus_per_gb
+    - instance_os
+    - linux_os_version
+
+  - title: "GlusterFS Client Instance Configuration"
+    visible: true
+    variables:
+    - client_node_shape
+    - client_node_count
+    - client_node_hostname_prefix
+    
+  - title: "GlusterFS Filesystem Configuration"
+    visible: true
+    variables:
+    - gluster_block_size
+    - gluster_mount_point
+    - gluster_version
+    - gluster_volume_types
+    - gluster_replica
+    - gluster_high_availability
+
+
+# Add variable here ,  if you want to do input validation or else it does not need to be included here.
+variables:
+  vcn_cidr:
+    title: "VCN CIDR"
+    description: "Network CIDR to use for VCN."
+    type: string
+    default: "10.0.0.0/16"
+    required: true
+
+  availability_domain_name:
+    title: "Availability Domain"
+    description: "Availability Domain where filesystem is deployed."
+    type: oci:identity:availabilitydomain:name
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+    required: true
+
+  use_existing_vcn:
+    required: true
+    visibile: true
+    type: boolean
+    default: false
+    title: "Use existing VCN?"
+    description: "Check the box to use already existing VCN."
+
+  vcn_id:
+    required: false
+    type: string
+    title: "VCN OCID"
+    description: "Already existing VCN OCID to be used."
+
+  bastion_subnet_id:
+    required: false
+    type: string
+    title: "Bastion Subnet OCID"
+    description: "Already existing Bastion Subnet OCID to be used."
+
+  storage_subnet_id:
+    required: false
+    type: string
+    title: "Storage Subnet OCID"
+    description: "Already existing Storage Subnet OCID to be used."
+
+  fs_subnet_id:
+    required: false
+    type: string
+    title: "FS Subnet OCID"
+    description: "Already existing FS Subnet OCID to be used."
+
+
+  bastion_shape:
+    title: "Bastion Compute Shape"
+    description: "Shape for bastion instances."
+    type: oci:core:instanceshape:name
+    default: "VM.Standard2.2"
+    required: true
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      imageId: ${mp_listing_resource_id}
+
+  bastion_node_count:
+    title: "Number of bastion"
+    description: "Number of bastion instances."
+    type: integer
+    default: 1
+    required: true
+
+  bastion_hostname_prefix:
+    type: string
+    required: true
+    default: "bastion-"
+    description: "Bastion hostname prefix "
+
+  gluster_server_shape:
+    title: "Gluster Server Compute Shape"
+    description: "Shape for gluster server instances."
+    type: oci:core:instanceshape:name
+    default: "BM.Standard2.52"
+    required: true
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      imageId: ${mp_listing_resource_id}
+
+  gluster_server_node_count:
+    title: "Number of Gluster Servers"
+    description: "Number of gluster server instances."
+    type: integer
+    default: 3
+    minimum: 1
+    required: true
+
+  gluster_server_hostname_prefix:
+    type: string
+    required: true
+    default: "g-server-"
+    description: "Gluster server hostname prefix "
+
+  gluster_server_disk_count:
+    title: "Number of block volumes"
+    description: "Number of block volumes for each gluster server. Local NVME currently not supported. Will be supported soon."
+    type: integer
+    default: 1
+    minimum: 1
+    maximum: 31
+    required: true
+
+  gluster_server_disk_size:
+    title: "Block volume size"
+    description: "Size in GB for block volumes attached to gluster server, min 50."
+    type: integer
+    default: 50
+    minimum: 50
+    maximum: 32768
+    required: true
+
+  gluster_server_disk_vpus_per_gb:
+    description: "Block volume performance"
+    type: enum
+    enum:
+    - "20"
+    - "10"
+    - "0"
+    required: true
+    default: "10"
+
+  gluster_server_num_of_disks_in_brick:
+    title: "Number of block volumes in a Gluster brick"
+    description: "Number of block volumes combined together to create a gluster brick. Make sure Number of Block volumes is a multiplier of number of block volumes in a Gluster brick.  i.e: disk_count/num_of_disks_in_brick = an Integer, eg: disk_count=8,num_of_disks_in_brick=4 (8/4=2)."
+    type: integer
+    default: 1
+    minimum: 1
+    maximum: 31
+    required: true
+
+  client_node_shape:
+    title: "Client Compute Shape"
+    description: "Shape for client instances."
+    type: oci:core:instanceshape:name
+    default: "VM.Standard2.2"
+    required: false
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+#      imageId: ${mp_listing_resource_id}
+
+  client_node_count:
+    title: "Number of clients"
+    description: "Number of client instances."
+    type: integer
+    default: 1
+    minimum: 0
+    required: false
+
+  client_node_hostname_prefix:
+    type: string
+    required: true
+    default: "g-compute-"
+    description: "Client hostname prefix "
+
+  gluster_block_size:
+    type: string
+    required: true
+    default: "256"
+    description: "Has to be in Kilobytes only. Mention only numerical value, example 256, not 256K"
+
+  gluster_mount_point:
+    type: string
+    required: true
+    default: "/glusterfs"
+    description: "Mount point on client instances for Gluster filesystem."
+
+  gluster_version:
+    description: "Gluster version."
+    type: enum
+    enum:
+    - "5.9"
+    - "3.12"
+    required: true
+    default: "5.9"
+
+  gluster_volume_types:
+    description: "Gluster Volume Types that can be created on OCI. "
+    type: enum
+    enum:
+    - "Distributed"
+    - "Dispersed"
+    - "DistributedDispersed"
+    - "Replicated"
+    - "DistributedReplicated"
+    required: true
+    default: "Distributed"
+
+  gluster_replica:
+    description: "Number of replica within filesystem. Replica=1 means only 1 copy of data."
+    type: integer
+    minimum: 1
+    maximum: 2
+    required: true
+    default: 1
+
+  gluster_high_availability:
+    type: string
+    required: true
+    default: "false"
+    description: "For future use. By default, set to false"
+
+  ad_number:
+    description: "Shadowed TF value to ignore"
+    type: integer
+    required: true
+    default: -1
+
+  scripts_directory:
+    type: string
+    required: true
+    default: "script"
+    description: "Folder which has all the scripts."
+
+  ssh_user:
+    type: string
+    required: true
+    default: "opc"
+    description: "opc for OracleLinux & CentOS, ubuntu for Ubuntu OS."
+
+  mp_listing_id:
+    type: string
+    required: true
+    description: "Marketplace Listing ID"
+
+  mp_listing_resource_id:
+    type: oci:core:image:id
+    required: true
+    description: "Marketplace Image OCID"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+
+  mp_listing_resource_version:
+    type: string
+    required: true
+    description: "Marketplace Listing package version"
+
+  instance_os:
+    type: enum
+    title: "Instance OS for Gluster Server"
+    description: "Choose OS/image installed for Gluster Server."
+    required: false
+    enum:
+      - "CentOS"
+    default: "CentOS"
+
+  linux_os_version:
+    type: enum
+    title: "OS Version for Gluster Server"
+    description: "Choose Operating System version for Gluster Server."
+    required: false
+    enum:
+      - "7"
+    default: "7"
