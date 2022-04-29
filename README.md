@@ -76,10 +76,6 @@ When you no longer need the deployment, you can run this command to destroy the 
 
     terraform destroy
 
-## Architecture Diagram
-
-![](./images/glusterfs-oci.png)
-
 # Contributing
 This project is open source.  Please submit your contributions by forking this repository and submitting a pull request!  Oracle appreciates any contributions that are made by the open source community.
 
