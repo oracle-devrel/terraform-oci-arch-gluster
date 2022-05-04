@@ -80,7 +80,7 @@ When you no longer need the deployment, you can run this command to destroy the 
 This project is open source.  Please submit your contributions by forking this repository and submitting a pull request!  Oracle appreciates any contributions that are made by the open source community.
 
 ## Attribution & Credits
-Initially, this project was created and distributed in [GitHub Oracle QuickStart space](https://github.com/oracle-quickstart/oci-gluster). For that reason, we would like to thank all the involved contributors enlisted below:
+Initially, this project was created and distributed in [GitHub Oracle QuickStart space](https://github.com/oracle-quickstart). For that reason, we would like to thank all the involved contributors enlisted below:
 - Taylor Newill (https://github.com/tanewill)
 - Chuck Gilbert (https://github.com/gilbertc777)
 - Pinkesh Valdria (https://github.com/pvaldria)

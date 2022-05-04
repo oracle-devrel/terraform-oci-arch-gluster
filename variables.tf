@@ -117,7 +117,6 @@ variable "volume_attach_device_mapping" {
 variable "region" {}
 variable "tenancy_ocid" {}
 variable "compartment_ocid" {}
-variable "availablity_domain_name" {}
 
 
 /*
