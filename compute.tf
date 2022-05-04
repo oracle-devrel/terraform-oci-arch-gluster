@@ -70,7 +70,7 @@ resource "oci_core_instance" "gluster_server" {
 
 resource "oci_core_instance" "client_node" {
   count               = var.client_node_count
-  availability_domain = var.availablity_domain_name
+  availability_domain = var.availability_domain_name == "" ? data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain_number]["name"] : var.availability_domain_name
   fault_domain        = "FAULT-DOMAIN-${(count.index%3)+1}"
   compartment_id      = var.compartment_ocid
   display_name        = "${var.client_node_hostname_prefix}${format("%01d", count.index+1)}"

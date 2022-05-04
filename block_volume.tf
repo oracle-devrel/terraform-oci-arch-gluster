@@ -3,7 +3,7 @@
 
 resource "oci_core_volume" "gluster_blockvolume" {
   count = var.gluster_server_node_count * var.gluster_server_disk_count
-  availability_domain = var.availablity_domain_name
+  availability_domain = var.availability_domain_name == "" ? data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain_number]["name"] : var.availability_domain_name
   compartment_id      = var.compartment_ocid
   display_name        = "server${count.index % var.gluster_server_node_count + 1}-brick${count.index % var.gluster_server_disk_count + 1}"
   size_in_gbs         = var.gluster_server_disk_size
